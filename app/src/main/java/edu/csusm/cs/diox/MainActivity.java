@@ -11,8 +11,9 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 public class MainActivity extends AppCompatActivity {
     private FusedLocationProviderClient mLocationProvider;
-    private Location mLastLocation;
-    private int mLastBeacon;
+    private Reading mLastReading;
+
+    static final int CURRENT_READING_REQUEST = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +29,6 @@ public class MainActivity extends AppCompatActivity {
             public void onSuccess(Location location) {
                 mLastLocation = location;
             }
-        })
+        });
     }
 }
