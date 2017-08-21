@@ -9,6 +9,8 @@ import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SearchView;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -30,21 +32,42 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        findViewById(R.id.start_service_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                BeaconReadService.startRepeatingResponding(this, 5*60*1000 , myReciever);
+            }
+        });
+        findViewById(R.id.stop_service_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                BeaconReadService.stopRepeating(this);
+            }
+        });
+        findViewById(R.id.update_reading_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                updateLocation();
+            }
+        });
+
         outputLine = (TextView) findViewById(R.id.reading_output);
 
         mLocationProvider = LocationServices.getFusedLocationProviderClient(this);
     }
 
-    private void updateLocation(){
-        Intent intent = BeaconReadService.newRespondingIntent(this,new ResultReceiver(null){
-            @Override
-            protected void onReceiveResult(int rcode, Bundle rdata){
-                if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
-                    mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_READING);
-                    updateReadingLine();
-                }
+    private ResultReceiver myReciever = new ResultReceiver(null){
+        @Override
+        protected void onReceiveResult(int rcode, Bundle rdata){
+            if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
+                mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_READING);
+                updateReadingLine();
             }
-        });
+        }
+    };
+
+    private void updateLocation(){
+        Intent intent = BeaconReadService.newRespondingIntent(this, myReciever);
         startService(intent);
     }
 
@@ -62,24 +85,5 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void startService(){
-        Intent intent = BeaconReadService.newRespondingIntent(this,new ResultReceiver(null){
-            @Override
-            protected void onReceiveResult(int rcode, Bundle rdata){
-                if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
-                    mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_READING);
-                    updateReadingLine();
-                }
-            }
-        });
-        PendingIntent pendingIntent = PendingIntent.getService(this,0, intent,0);
-
-        ((AlarmManager)getSystemService(ALARM_SERVICE)).setRepeating(AlarmManager.ELAPSED_REALTIME,
-                SystemClock.elapsedRealtime(),5*60*1000,pendingIntent);
-    }
-
-    private void stopService(){
-
-    }
 }
 

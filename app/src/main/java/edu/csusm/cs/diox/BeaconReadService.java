@@ -1,10 +1,13 @@
 package edu.csusm.cs.diox;
 
+import android.app.AlarmManager;
 import android.app.IntentService;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.Context;
 import android.os.Parcelable;
 import android.os.ResultReceiver;
+import android.os.SystemClock;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -40,10 +43,33 @@ public class BeaconReadService extends IntentService {
     }
 
     public static Intent newRespondingIntent(Context context, ResultReceiver reciever){
-        Intent rIntent = new Intent(context, BeaconReadService.class);
-        rIntent.setAction(ACTION_TAKE_READING);
+        Intent rIntent = newIntent(context);
         rIntent.putExtra(EXTRA_RESULT,(Parcelable)reciever);
         return rIntent;
+    }
+
+    public static Intent newIntent(Context context){
+        Intent rIntent = new Intent(context, BeaconReadService.class);
+        rIntent.setAction(ACTION_TAKE_READING);
+        return rIntent;
+    }
+
+    public static void startRepeatingResponding(Context context, int millis, ResultReceiver resultReceiver){
+        PendingIntent pendingIntent = PendingIntent.getService(context, 0, newRespondingIntent(context,resultReceiver), 0);
+        ((AlarmManager)context.getSystemService(ALARM_SERVICE))
+                .setRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(), millis, pendingIntent);
+    }
+
+    public static void startRepeating(Context context, int millis){
+        PendingIntent pendingIntent = PendingIntent.getService(context, 0, newIntent(context), 0);
+        ((AlarmManager)context.getSystemService(ALARM_SERVICE))
+                .setRepeating(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime(), millis, pendingIntent);
+    }
+
+    public static void stopRepeating(Context context){
+        PendingIntent pendingIntent = PendingIntent.getService(context, 0, newIntent(context), 0);
+        ((AlarmManager)context.getSystemService(ALARM_SERVICE))
+                .cancel(pendingIntent);
     }
 
     @Override
