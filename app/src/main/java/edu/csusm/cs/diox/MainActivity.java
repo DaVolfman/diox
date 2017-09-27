@@ -35,13 +35,13 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.start_service_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                BeaconReadService.startRepeatingResponding(this, 5*60*1000 , myReciever);
+                BeaconReadService.startRepeatingResponding(MainActivity.this, 5*60*1000 , myReciever);
             }
         });
         findViewById(R.id.stop_service_button).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                BeaconReadService.stopRepeating(this);
+                BeaconReadService.stopRepeating(MainActivity.this);
             }
         });
         findViewById(R.id.update_reading_button).setOnClickListener(new View.OnClickListener() {

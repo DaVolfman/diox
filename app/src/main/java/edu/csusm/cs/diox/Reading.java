@@ -9,8 +9,6 @@ import android.os.Parcelable;
  */
 
 public class Reading implements Parcelable{
-    private Location mLocation;
-
     public long getTimeEpochSeconds() {
         return mTimeEpochSeconds;
     }
@@ -48,29 +46,18 @@ public class Reading implements Parcelable{
     public void writeToParcel(Parcel p, int flags){
         p.writeLong(mTimeEpochSeconds);
         p.writeInt(mBeaconID);
-        p.writeParcelable(mLocation,0);
         p.writeDouble(mConcentrationPPM);
     }
 
-    public Location getLocation() {
-        return mLocation;
-    }
-
-    public void setLocation(Location location) {
-        mLocation = location;
-    }
-
-    public Reading(long time, int beacon, Location location, double concentration){
+    public Reading(long time, int beacon, double concentration){
         mTimeEpochSeconds = time;
         mBeaconID = beacon;
-        mLocation = location;
         mConcentrationPPM = concentration;
     }
 
     private Reading(Parcel in){
         mTimeEpochSeconds = in.readLong();
         mBeaconID = in.readInt();
-        mLocation = Location.CREATOR.createFromParcel(in);
         mConcentrationPPM = in.readDouble();
     }
 

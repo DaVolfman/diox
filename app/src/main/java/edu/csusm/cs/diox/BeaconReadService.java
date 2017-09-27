@@ -3,11 +3,17 @@ package edu.csusm.cs.diox;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.PendingIntent;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothManager;
 import android.content.Intent;
 import android.content.Context;
+import android.os.Handler;
 import android.os.Parcelable;
 import android.os.ResultReceiver;
 import android.os.SystemClock;
+
+import java.util.Arrays;
 
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
@@ -25,6 +31,34 @@ public class BeaconReadService extends IntentService {
     public static final String RESULT_NEW_READING = "edu.csusm.cs.diox.extra.READING_UPDATED";
     public static final String RESULT_READING = "edu.csusm.cs.diox.extra.UPDATED_READING";
 
+    protected static final int SCAN_PERIOD = 3000;
+
+    private BluetoothAdapter mBluetoothAdapter;
+    private Handler mHandler;
+
+    private static int sHighestRSSI = 0;
+    private static byte[] sHighestAdvert;
+    private static Reading sReading;
+    private BluetoothAdapter.LeScanCallback mScanCallback = new BluetoothAdapter.LeScanCallback(){
+        @Override
+        public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
+            final byte[] iBeacon_prefix = {0x02, 0x01, 0x06, 0x1a, -1, 0x4c,0x00, 0x02, 0x15};
+            final byte[] beaconatorID = {'B', 'E', 'A', 'C', 'O', 'N', 'A', 'T', 'O', 'R'};
+            if(Arrays.equals(Arrays.copyOfRange(sHighestAdvert,0,9),iBeacon_prefix) &&
+                    Arrays.equals(Arrays.copyOfRange(sHighestAdvert,9,19),beaconatorID) &&
+                    (sHighestRSSI == 0 || sHighestRSSI < i)){
+                sHighestRSSI = i;
+                sHighestAdvert = bytes;
+            }
+        }
+    };
+
+    @Override
+    public void onCreate(){
+        super.onCreate();
+        final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
+        mBluetoothAdapter = bluetoothManager.getAdapter();
+    }
 
     public BeaconReadService() {
         super("BeaconReadService");
@@ -78,11 +112,30 @@ public class BeaconReadService extends IntentService {
             final String action = intent.getAction();
             if (ACTION_TAKE_READING.equals(action)) {
                 takeSensorReading();
+                if(sReading != null){
+                    intent.putExtra("Reading", sReading);
+                    sReading= null;
+                    sHighestRSSI= 0;
+                    sHighestAdvert=null;
+                }
             }
         }
     }
 
     private void takeSensorReading(){
-        //do the thing!
+        sReading = null;
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                mBluetoothAdapter.stopLeScan(mScanCallback);
+
+                BeaconReadService.sReading = new Reading(System.currentTimeMillis() / 1000l,
+                        (int)(BeaconReadService.sHighestAdvert[25]) << 16 +
+                                (int)(BeaconReadService.sHighestAdvert[26]) << 8 +
+                                (int)(BeaconReadService.sHighestAdvert[27]),
+                        (double)(int)(BeaconReadService.sHighestAdvert[28]) * 100);
+            }
+        },SCAN_PERIOD);
+        mBluetoothAdapter.startLeScan(mScanCallback);
     }
 }
