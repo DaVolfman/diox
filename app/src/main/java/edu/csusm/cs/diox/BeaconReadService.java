@@ -31,7 +31,9 @@ public class BeaconReadService extends IntentService {
     public static final String RESULT_NEW_READING = "edu.csusm.cs.diox.extra.READING_UPDATED";
     public static final String RESULT_READING = "edu.csusm.cs.diox.extra.UPDATED_READING";
 
-    protected static final int SCAN_PERIOD = 3000;
+    public static final int REQUEST_ENABLE_BT = 1;
+
+    protected static final int SCAN_PERIOD = 5000;
 
     private BluetoothAdapter mBluetoothAdapter;
     private Handler mHandler;
@@ -44,9 +46,9 @@ public class BeaconReadService extends IntentService {
         public void onLeScan(BluetoothDevice bluetoothDevice, int i, byte[] bytes) {
             final byte[] iBeacon_prefix = {0x02, 0x01, 0x06, 0x1a, -1, 0x4c,0x00, 0x02, 0x15};
             final byte[] beaconatorID = {'B', 'E', 'A', 'C', 'O', 'N', 'A', 'T', 'O', 'R'};
-            if(Arrays.equals(Arrays.copyOfRange(sHighestAdvert,0,9),iBeacon_prefix) &&
-                    Arrays.equals(Arrays.copyOfRange(sHighestAdvert,9,19),beaconatorID) &&
-                    (sHighestRSSI == 0 || sHighestRSSI < i)){
+            if(Arrays.equals(Arrays.copyOfRange(bytes,0,9),iBeacon_prefix) &&
+                    Arrays.equals(Arrays.copyOfRange(bytes,9,19),beaconatorID) &&
+                    (sHighestRSSI == 0 || sHighestRSSI <= i)){
                 sHighestRSSI = i;
                 sHighestAdvert = bytes;
             }
@@ -58,6 +60,7 @@ public class BeaconReadService extends IntentService {
         super.onCreate();
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
+        mHandler = new Handler();
     }
 
     public BeaconReadService() {
@@ -112,8 +115,12 @@ public class BeaconReadService extends IntentService {
             final String action = intent.getAction();
             if (ACTION_TAKE_READING.equals(action)) {
                 takeSensorReading();
+                try {
+                    wait(SCAN_PERIOD);
+                } catch (InterruptedException e) {
+                }
                 if(sReading != null){
-                    intent.putExtra("Reading", sReading);
+                    intent.putExtra(RESULT_NEW_READING, sReading);
                     sReading= null;
                     sHighestRSSI= 0;
                     sHighestAdvert=null;
@@ -128,6 +135,9 @@ public class BeaconReadService extends IntentService {
             @Override
             public void run() {
                 mBluetoothAdapter.stopLeScan(mScanCallback);
+                if(sHighestAdvert == null){
+                    return;
+                }
 
                 BeaconReadService.sReading = new Reading(System.currentTimeMillis() / 1000l,
                         (int)(BeaconReadService.sHighestAdvert[25]) << 16 +

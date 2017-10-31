@@ -2,6 +2,7 @@ package edu.csusm.cs.diox;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Intent;
 import android.location.Location;
 import android.os.ResultReceiver;
@@ -19,13 +20,16 @@ import com.google.android.gms.location.LocationServices;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static edu.csusm.cs.diox.BeaconReadService.REQUEST_ENABLE_BT;
+
 public class MainActivity extends AppCompatActivity {
     private FusedLocationProviderClient mLocationProvider;
-    private Reading mLastReading;
+    private Reading mLastReading = null;
 
     static final int CURRENT_READING_REQUEST = 1;
 
     private TextView outputLine = null;
+    private BluetoothAdapter mBluetoothAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,13 +58,19 @@ public class MainActivity extends AppCompatActivity {
         outputLine = (TextView) findViewById(R.id.reading_output);
 
         mLocationProvider = LocationServices.getFusedLocationProviderClient(this);
+
+        if(mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()){
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
     }
 
     private ResultReceiver myReciever = new ResultReceiver(null){
         @Override
         protected void onReceiveResult(int rcode, Bundle rdata){
-            if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
-                mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_READING);
+            //if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
+            if(rdata != null && rdata.containsKey(BeaconReadService.RESULT_NEW_READING)){
+                mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_NEW_READING);
                 updateReadingLine();
             }
         }
