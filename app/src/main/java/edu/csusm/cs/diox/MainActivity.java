@@ -69,10 +69,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onReceiveResult(int rcode, Bundle rdata){
             //if(rdata.getBoolean(BeaconReadService.RESULT_NEW_READING, false) == true){
-            if(rdata != null && rdata.containsKey(BeaconReadService.RESULT_NEW_READING)){
-                mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_NEW_READING);
-                updateReadingLine();
+            if(rdata != null && rdata.containsKey(BeaconReadService.RESULT_READING)){
+                mLastReading = (Reading) rdata.getParcelable(BeaconReadService.RESULT_READING);
             }
+            updateReadingLine();
         }
     };
 

@@ -15,6 +15,8 @@ import android.os.SystemClock;
 
 import java.util.Arrays;
 
+import static android.os.SystemClock.sleep;
+
 /**
  * An {@link IntentService} subclass for handling asynchronous task requests in
  * a service on a separate handler thread.
@@ -33,7 +35,7 @@ public class BeaconReadService extends IntentService {
 
     public static final int REQUEST_ENABLE_BT = 1;
 
-    protected static final int SCAN_PERIOD = 5000;
+    protected static final int SCAN_PERIOD = 2500;
 
     private BluetoothAdapter mBluetoothAdapter;
     private Handler mHandler;
@@ -51,6 +53,7 @@ public class BeaconReadService extends IntentService {
                     (sHighestRSSI == 0 || sHighestRSSI <= i)){
                 sHighestRSSI = i;
                 sHighestAdvert = bytes;
+                BeaconReadService.parseReading();
             }
         }
     };
@@ -115,12 +118,9 @@ public class BeaconReadService extends IntentService {
             final String action = intent.getAction();
             if (ACTION_TAKE_READING.equals(action)) {
                 takeSensorReading();
-                try {
-                    wait(SCAN_PERIOD);
-                } catch (InterruptedException e) {
-                }
+                sleep(SCAN_PERIOD*2);
                 if(sReading != null){
-                    intent.putExtra(RESULT_NEW_READING, sReading);
+                    intent.putExtra(RESULT_READING, sReading);
                     sReading= null;
                     sHighestRSSI= 0;
                     sHighestAdvert=null;
@@ -138,14 +138,19 @@ public class BeaconReadService extends IntentService {
                 if(sHighestAdvert == null){
                     return;
                 }
-
-                BeaconReadService.sReading = new Reading(System.currentTimeMillis() / 1000l,
-                        (int)(BeaconReadService.sHighestAdvert[25]) << 16 +
-                                (int)(BeaconReadService.sHighestAdvert[26]) << 8 +
-                                (int)(BeaconReadService.sHighestAdvert[27]),
-                        (double)(int)(BeaconReadService.sHighestAdvert[28]) * 100);
             }
         },SCAN_PERIOD);
         mBluetoothAdapter.startLeScan(mScanCallback);
     }
+
+    static protected void parseReading(){
+        if(null != sHighestAdvert){
+            BeaconReadService.sReading = new Reading(System.currentTimeMillis() / 1000l,
+                    (int)(BeaconReadService.sHighestAdvert[25]) << 16 +
+                            (int)(BeaconReadService.sHighestAdvert[26]) << 8 +
+                            (int)(BeaconReadService.sHighestAdvert[27]),
+                    (double)(int)(BeaconReadService.sHighestAdvert[28]) * 100);
+        }
+    }
 }
+
